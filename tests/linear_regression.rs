@@ -1,28 +1,27 @@
 use core::panic;
 
-use nalgebra::{OMatrix, OVector};
+use nalgebra::{Matrix2, Matrix3x2, Vector};
 use slearning::linear_regression::OlsRegressor;
 use slearning::SupervisedModel;
 
 #[test]
 fn test_ols_works() {
-    let train_input: OMatrix<f64, _, _> = nalgebra::Matrix2::from([[1.0, 2.0], [3.0, 4.0]]);
-    let train_output: OMatrix<f64, _, _> = nalgebra::Vector2::from([1.5, 3.5]);
-    let expected_coefficients = nalgebra::Vector2::from([2.25, -0.25]);
+    let train_input = Matrix2::from([[1.0, 2.0], [3.0, 4.0]]);
+    let train_output = Vector::from([1.5, 3.5]);
+    let expected_coefficients = Vector::from([2.25, -0.25]);
 
-    let test_input: OMatrix<f64, _, _> =
-        nalgebra::Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
-    let expected_prediction: OVector<f64, _> = nalgebra::OVector::from([[1.5, 4.0, 3.75]]);
+    let test_input = Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
+    let expected_prediction = Vector::from([[1.5, 4.0, 3.75]]);
 
-    let mut ols: OlsRegressor<f64, _> = OlsRegressor::default();
+    let mut ols = OlsRegressor::default();
 
     if let Err(err) = ols.train(&train_input, &train_output) {
         panic!("Training caused error: {}", err);
     }
 
-    match ols.coefficient_estimates {
+    match ols.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, expected_coefficients),
-        None => panic!("`coefficient_estimates` field is None"),
+        None => panic!("`coefficients` field is None"),
     }
 
     let prediction = ols.predict(&test_input);
@@ -43,9 +42,8 @@ fn test_ols_works() {
 #[should_panic(expected = "This model is not trained")]
 #[allow(unused_must_use)]
 fn test_untrained_ols_fails_to_predict() {
-    let test_input: OMatrix<f64, _, _> =
-        nalgebra::Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
+    let test_input = Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
 
-    let ols: OlsRegressor<f64, _> = OlsRegressor::default();
+    let ols = OlsRegressor::default();
     ols.predict(&test_input);
 }
