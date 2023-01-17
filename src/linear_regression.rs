@@ -6,6 +6,34 @@ use nalgebra::{
     SquareMatrix,
 };
 
+fn train_linear_regressor<T, R, C>(
+    inputs: &OMatrix<T, R, C>,
+    outputs: &OVector<T, R>,
+    penalty: T,
+) -> anyhow::Result<OVector<T, C>>
+where
+    T: RealField,
+    R: Dim,
+    C: Dim,
+    DefaultAllocator: Allocator<T, R, C>
+        + Allocator<T, R>
+        + Allocator<T, C>
+        + Allocator<T, C, R>
+        + Allocator<T, C, C>,
+{
+    let mut normal_matrix_inverse: SquareMatrix<T, C, _> = inputs.transpose() * inputs;
+    if !penalty.is_zero() {
+        let (n, _) = normal_matrix_inverse.shape();
+        let diagonal = DMatrix::from_diagonal_element(n, n, penalty.clone());
+        normal_matrix_inverse += diagonal;
+    }
+    if !normal_matrix_inverse.try_inverse_mut() {
+        panic!("The normal matrix is not invertible"); // TODO: return Error
+    }
+    let beta_hat = normal_matrix_inverse * inputs.transpose() * outputs;
+    Ok(beta_hat)
+}
+
 /// Simple linear regression using Ordinary Least Squares (OLS)
 ///
 /// Simple linear regression uses linear coefficients to model a single output variable as a
@@ -42,13 +70,13 @@ where
         + Allocator<T, C, C>,
 {
     fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> anyhow::Result<()> {
-        let mut normal_matrix_inverse: SquareMatrix<T, C, _> = inputs.transpose() * inputs;
-        if !normal_matrix_inverse.try_inverse_mut() {
-            panic!("The normal matrix is not invertible"); // TODO: return Error
+        match train_linear_regressor(&inputs, &outputs, nalgebra::zero()) {
+            Ok(beta_hat) => {
+                self.coefficients = Some(beta_hat);
+                Ok(())
+            }
+            Err(e) => Err(e),
         }
-        let beta_hat = normal_matrix_inverse * inputs.transpose() * outputs;
-        self.coefficients = Some(beta_hat);
-        Ok(())
     }
 
     fn predict(&self, inputs: &OMatrix<T, R, C>) -> anyhow::Result<OVector<T, R>> {
@@ -98,18 +126,13 @@ where
     OMatrix<T, C, C>: std::ops::AddAssign<DMatrix<T>>,
 {
     fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> anyhow::Result<()> {
-        let mut normal_matrix_inverse: SquareMatrix<T, C, _> = inputs.transpose() * inputs;
-        if !self.penalty.is_zero() {
-            let (n, _) = normal_matrix_inverse.shape();
-            let diagonal = DMatrix::from_diagonal_element(n, n, self.penalty.clone());
-            normal_matrix_inverse += diagonal;
+        match train_linear_regressor(&inputs, &outputs, self.penalty) {
+            Ok(beta_hat) => {
+                self.coefficients = Some(beta_hat);
+                Ok(())
+            }
+            Err(e) => Err(e),
         }
-        if !normal_matrix_inverse.try_inverse_mut() {
-            panic!("The normal matrix is not invertible"); // TODO: return Error
-        }
-        let beta_hat = normal_matrix_inverse * inputs.transpose() * outputs;
-        self.coefficients = Some(beta_hat);
-        Ok(())
     }
 
     fn predict(&self, inputs: &OMatrix<T, R, C>) -> anyhow::Result<OVector<T, R>> {
