@@ -1,6 +1,7 @@
 use crate::traits::SupervisedModel;
 
-use anyhow;
+use crate::{SLearningError, SLearningResult};
+use nalgebra::DimName;
 use nalgebra::{
     self, allocator::Allocator, DMatrix, DefaultAllocator, Dim, OMatrix, OVector, RealField,
     SquareMatrix,
@@ -9,12 +10,12 @@ use nalgebra::{
 fn train_linear_regressor<T, R, C>(
     inputs: &OMatrix<T, R, C>,
     outputs: &OVector<T, R>,
-    penalty: T,
-) -> anyhow::Result<OVector<T, C>>
+    penalty: &T,
+) -> SLearningResult<OVector<T, C>>
 where
     T: RealField,
     R: Dim,
-    C: Dim,
+    C: Dim + DimName,
     DefaultAllocator: Allocator<T, R, C>
         + Allocator<T, R>
         + Allocator<T, C>
@@ -28,7 +29,9 @@ where
         normal_matrix_inverse += diagonal;
     }
     if !normal_matrix_inverse.try_inverse_mut() {
-        panic!("The normal matrix is not invertible"); // TODO: return Error
+        return Err(SLearningError::InvalidData(
+            "The normal matrix is not invertible".to_string(),
+        ));
     }
     let beta_hat = normal_matrix_inverse * inputs.transpose() * outputs;
     Ok(beta_hat)
@@ -62,27 +65,26 @@ impl<T, R, C> SupervisedModel<OMatrix<T, R, C>, OVector<T, R>> for OlsRegressor<
 where
     T: RealField,
     R: Dim,
-    C: Dim,
+    C: Dim + DimName,
     DefaultAllocator: Allocator<T, R, C>
         + Allocator<T, R>
         + Allocator<T, C>
         + Allocator<T, C, R>
         + Allocator<T, C, C>,
 {
-    fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> anyhow::Result<()> {
-        match train_linear_regressor(&inputs, &outputs, nalgebra::zero()) {
-            Ok(beta_hat) => {
-                self.coefficients = Some(beta_hat);
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
+    fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> SLearningResult<()> {
+        self.coefficients = Some(train_linear_regressor(
+            &inputs,
+            &outputs,
+            &nalgebra::zero(),
+        )?);
+        Ok(())
     }
 
-    fn predict(&self, inputs: &OMatrix<T, R, C>) -> anyhow::Result<OVector<T, R>> {
+    fn predict(&self, inputs: &OMatrix<T, R, C>) -> SLearningResult<OVector<T, R>> {
         match &self.coefficients {
             Some(coefficient_estimates) => Ok(inputs * coefficient_estimates),
-            None => panic!("This model is not trained"), // TODO: return Error
+            _ => Err(SLearningError::UntrainedModel),
         }
     }
 }
@@ -104,12 +106,20 @@ where
     R: Dim,
     DefaultAllocator: Allocator<T, R>,
 {
-    pub fn new(penalty: T) -> Self {
-        // TODO: validate penalty > 0
-        Self {
+    pub fn new(penalty: T) -> SLearningResult<Self> {
+        if penalty.is_negative() {
+            return Err(SLearningError::InvalidParameters(
+                "Penalty cannot be less than zero.".to_string(),
+            ));
+        }
+        // if penalty.is_zero() {
+        //     // penalty = 0 is equivalent to normal OLS
+        //     OlsRegressor { coefficients: None }
+        // }
+        Ok(Self {
             penalty,
             coefficients: None,
-        }
+        })
     }
 }
 
@@ -117,7 +127,7 @@ impl<T, R, C> SupervisedModel<OMatrix<T, R, C>, OVector<T, R>> for RidgeRegresso
 where
     T: RealField,
     R: Dim,
-    C: Dim,
+    C: Dim + DimName,
     DefaultAllocator: Allocator<T, R, C>
         + Allocator<T, R>
         + Allocator<T, C>
@@ -125,21 +135,15 @@ where
         + Allocator<T, C, C>,
     OMatrix<T, C, C>: std::ops::AddAssign<DMatrix<T>>,
 {
-    fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> anyhow::Result<()> {
-        match train_linear_regressor(&inputs, &outputs, self.penalty) {
-            Ok(beta_hat) => {
-                self.coefficients = Some(beta_hat);
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
+    fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> SLearningResult<()> {
+        self.coefficients = Some(train_linear_regressor(&inputs, &outputs, &self.penalty)?);
+        Ok(())
     }
 
-    fn predict(&self, inputs: &OMatrix<T, R, C>) -> anyhow::Result<OVector<T, R>> {
+    fn predict(&self, inputs: &OMatrix<T, R, C>) -> SLearningResult<OVector<T, R>> {
         match &self.coefficients {
             Some(coefficient_estimates) => Ok(inputs * coefficient_estimates),
-            None => panic!("This model is not trained"), // TODO: return Error
+            None => Err(SLearningError::UntrainedModel),
         }
     }
 }
-
