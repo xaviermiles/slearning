@@ -90,6 +90,9 @@ where
 }
 
 /// Ridge is linear regression with a penalty on the number of coefficients
+///
+/// The penalty is a non-negative real value. A penalty of zero means that ridge regression is
+/// equivalent to simple linear regression.
 pub struct RidgeRegressor<T, R>
 where
     T: RealField,
@@ -112,10 +115,6 @@ where
                 "Penalty cannot be less than zero.".to_string(),
             ));
         }
-        // if penalty.is_zero() {
-        //     // penalty = 0 is equivalent to normal OLS
-        //     OlsRegressor { coefficients: None }
-        // }
         Ok(Self {
             penalty,
             coefficients: None,
