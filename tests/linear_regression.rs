@@ -1,6 +1,6 @@
 use nalgebra::{Matrix2, Matrix3x2, Vector};
 use slearning::linear_regression::{OlsRegressor, RidgeRegressor};
-use slearning::SupervisedModel;
+use slearning::{SLearningError, SupervisedModel};
 
 #[test]
 fn test_ols_works() {
@@ -37,13 +37,13 @@ fn test_ols_works() {
 // TODO: test OlsRegressor failing training due to OLS model assumptions being violated
 
 #[test]
-#[should_panic(expected = "This model is not trained")]
-#[allow(unused_must_use)]
 fn test_untrained_ols_fails_to_predict() {
     let test_input = Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
+    let expected = SLearningError::UntrainedModel;
 
     let ols = OlsRegressor::default();
-    ols.predict(&test_input);
+    let actual = ols.predict(&test_input).unwrap_err();
+    assert_eq!(actual, expected);
 }
 
 #[test]
@@ -57,7 +57,7 @@ fn test_ridge_works() {
     let expected_prediction =
         Vector::from([[1.9740259740259745, 2.233766233766235, 2.6623376623376633]]);
 
-    let mut ridge = RidgeRegressor::new(penalty);
+    let mut ridge = RidgeRegressor::new(penalty).unwrap();
     assert_eq!(ridge.penalty, penalty);
 
     if let Err(err) = ridge.train(&train_input, &train_output) {
@@ -82,11 +82,11 @@ fn test_ridge_works() {
 }
 
 #[test]
-#[should_panic(expected = "This model is not trained")]
-#[allow(unused_must_use)]
 fn test_untrained_ridge_fails_to_predict() {
     let test_input = Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
+    let expected = SLearningError::UntrainedModel;
 
-    let ols = RidgeRegressor::new(0.5);
-    ols.predict(&test_input);
+    let ols = RidgeRegressor::new(0.5).unwrap();
+    let actual = ols.predict(&test_input).unwrap_err();
+    assert_eq!(actual, expected);
 }

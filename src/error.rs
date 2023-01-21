@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum SLearningError {
     #[error("Invalid parameters: {0}.")]
     InvalidParameters(String),
