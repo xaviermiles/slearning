@@ -73,11 +73,7 @@ where
         + Allocator<T, C, C>,
 {
     fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> SLearningResult<()> {
-        self.coefficients = Some(train_linear_regressor(
-            &inputs,
-            &outputs,
-            &nalgebra::zero(),
-        )?);
+        self.coefficients = Some(train_linear_regressor(inputs, outputs, &nalgebra::zero())?);
         Ok(())
     }
 
@@ -135,7 +131,7 @@ where
     OMatrix<T, C, C>: std::ops::AddAssign<DMatrix<T>>,
 {
     fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> SLearningResult<()> {
-        self.coefficients = Some(train_linear_regressor(&inputs, &outputs, &self.penalty)?);
+        self.coefficients = Some(train_linear_regressor(inputs, outputs, &self.penalty)?);
         Ok(())
     }
 
