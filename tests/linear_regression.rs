@@ -1,6 +1,6 @@
 use std::marker::Copy;
 
-use nalgebra::{Matrix2, Matrix3x2, RealField, Vector, Vector2, Vector3};
+use nalgebra::{Const, Matrix2, Matrix3x2, RealField, Vector, Vector2, Vector3};
 use test_case::test_case;
 
 use slearning::linear_regression::{OlsRegressor, RidgeRegressor};
@@ -118,7 +118,15 @@ fn untrained_ridge_fails_to_predict() {
     let test_input = Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
     let expected = SLearningError::UntrainedModel;
 
-    let ols = RidgeRegressor::new(0.5).unwrap();
-    let actual = ols.predict(&test_input).unwrap_err();
+    let ridge = RidgeRegressor::new(0.5).unwrap();
+    let actual = ridge.predict(&test_input).unwrap_err();
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn ridge_fails_with_negative_penalty() {
+    let expected = SLearningError::InvalidParameters("Penalty cannot be less than zero.".into());
+
+    let ridge = RidgeRegressor::<_, Const<0>>::new(-0.5).unwrap_err();
+    assert_eq!(ridge, expected);
 }

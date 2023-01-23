@@ -41,6 +41,7 @@ where
 ///
 /// Simple linear regression uses linear coefficients to model a single output variable as a
 /// function of one or more input variables.
+#[derive(Debug)]
 pub struct OlsRegressor<T, R>
 where
     T: RealField,
@@ -89,6 +90,7 @@ where
 ///
 /// The penalty is a non-negative real value. A penalty of zero means that ridge regression is
 /// equivalent to simple linear regression.
+#[derive(Debug)]
 pub struct RidgeRegressor<T, R>
 where
     T: RealField,
