@@ -14,15 +14,14 @@ fn ols_works() {
 
     let mut ols = OlsRegressor::default();
 
-    ols.train(&train_input, &train_output)
-        .expect("Training returned error");
+    ols.train(&train_input, &train_output).unwrap();
 
     match ols.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, expected_coefficients),
         None => panic!("`coefficients` field is None"),
     }
 
-    let prediction = ols.predict(&test_input).expect("Prediction returned error");
+    let prediction = ols.predict(&test_input).unwrap();
     assert_eq!(prediction, expected_prediction);
 }
 
@@ -75,21 +74,17 @@ fn ridge_works(
 ) {
     let penalty = 0.5;
 
-    let mut ridge = RidgeRegressor::new(penalty).expect("RidgeRegressor failed to construct");
+    let mut ridge = RidgeRegressor::new(penalty).unwrap();
     assert_eq!(ridge.penalty, penalty);
 
-    ridge
-        .train(&train_input, &train_output)
-        .expect("Training returned error");
+    ridge.train(&train_input, &train_output).unwrap();
 
     match ridge.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, expected_coefficients),
         None => panic!("`coefficients` field is None"),
     }
 
-    let prediction = ridge
-        .predict(&test_input)
-        .expect("Prediction returned error");
+    let prediction = ridge.predict(&test_input).unwrap();
     assert_eq!(prediction, expected_prediction);
 }
 
