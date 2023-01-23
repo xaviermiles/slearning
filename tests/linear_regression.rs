@@ -14,25 +14,16 @@ fn ols_works() {
 
     let mut ols = OlsRegressor::default();
 
-    if let Err(err) = ols.train(&train_input, &train_output) {
-        panic!("Training caused error: {}", err);
-    }
+    ols.train(&train_input, &train_output)
+        .expect("Training returned error");
 
     match ols.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, expected_coefficients),
         None => panic!("`coefficients` field is None"),
     }
 
-    let prediction = ols.predict(&test_input);
-    match prediction {
-        Ok(actual_prediction) => {
-            assert_eq!(
-                actual_prediction, expected_prediction,
-                "Prediction is incorrect"
-            )
-        }
-        Err(err) => panic!("Predicting caused error: {}", err),
-    }
+    let prediction = ols.predict(&test_input).expect("Prediction returned error");
+    assert_eq!(prediction, expected_prediction);
 }
 
 /// Test that OlsRegressor fails to train when there is perfect collinearity between two of the
@@ -84,28 +75,22 @@ fn ridge_works(
 ) {
     let penalty = 0.5;
 
-    let mut ridge = RidgeRegressor::new(penalty).unwrap();
+    let mut ridge = RidgeRegressor::new(penalty).expect("RidgeRegressor failed to construct");
     assert_eq!(ridge.penalty, penalty);
 
-    if let Err(err) = ridge.train(&train_input, &train_output) {
-        panic!("Training caused error: {}", err);
-    }
+    ridge
+        .train(&train_input, &train_output)
+        .expect("Training returned error");
 
     match ridge.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, expected_coefficients),
         None => panic!("`coefficients` field is None"),
     }
 
-    let prediction = ridge.predict(&test_input);
-    match prediction {
-        Ok(actual_prediction) => {
-            assert_eq!(
-                actual_prediction, expected_prediction,
-                "Prediction is incorrect"
-            )
-        }
-        Err(err) => panic!("Predicting caused error: {}", err),
-    }
+    let prediction = ridge
+        .predict(&test_input)
+        .expect("Prediction returned error");
+    assert_eq!(prediction, expected_prediction);
 }
 
 #[test]
