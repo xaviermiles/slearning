@@ -27,4 +27,4 @@ jobs:
         run: cargo clippy --release -- -D warnings
 
       - name: Check formatting
-        run: cargo fmt --check
+        run: cargo +nightly fmt --check

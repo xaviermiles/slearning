@@ -1,4 +1,5 @@
 mod error;
+pub mod linear_classification;
 pub mod linear_regression;
 mod traits;
 

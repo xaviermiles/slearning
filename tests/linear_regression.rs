@@ -1,10 +1,11 @@
 use std::marker::Copy;
 
 use nalgebra::{Const, Matrix2, Matrix3x2, RealField, Vector, Vector2, Vector3};
+use slearning::{
+    linear_regression::{OlsRegressor, RidgeRegressor},
+    SLearningError, SupervisedModel,
+};
 use test_case::test_case;
-
-use slearning::linear_regression::{OlsRegressor, RidgeRegressor};
-use slearning::{SLearningError, SupervisedModel};
 
 #[test_case(
     Matrix2::from([[1.0, 2.0], [3.0, 4.0]]),
@@ -42,8 +43,9 @@ fn ols_works<T: RealField + Copy>(
     assert_eq!(prediction, expected_prediction);
 }
 
-/// Test that OlsRegressor fails to train when there is perfect collinearity between two of the
-/// input variables, since this violates one of the assumptions of the OLS model.
+/// Test that OlsRegressor fails to train when there is perfect collinearity
+/// between two of the input variables, since this violates one of the
+/// assumptions of the OLS model.
 #[test]
 fn ols_fails_to_train_with_collinear_input_variables() {
     let train_input = Matrix2::from([[1.0, 2.0], [2.0, 4.0]]);
