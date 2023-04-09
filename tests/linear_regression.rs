@@ -94,6 +94,7 @@ fn ols_fails_to_predict_with_wrong_dimensions() {
 }
 
 #[test_case(
+    0.5,
     DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
     DVector::from_vec(vec![1.5, 3.5]),
     DVector::from_vec(vec![0.41558441558441495, 0.5454545454545453]),
@@ -102,6 +103,7 @@ fn ols_fails_to_predict_with_wrong_dimensions() {
     "normal"
 )]
 #[test_case(
+    0.5f32,
     DMatrix::<f32>::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
     DVector::<f32>::from_vec(vec![1.5, 3.5]),
     DVector::<f32>::from_vec(vec![0.4155839, 0.54545456]),
@@ -109,8 +111,27 @@ fn ols_fails_to_predict_with_wrong_dimensions() {
     DVector::<f32>::from_vec(vec![2.0519476, 1.922077, 2.4675317]);
     "normal with f32"
 )]
+#[test_case(
+    2.0,
+    DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
+    DVector::from_vec(vec![1.5, 3.5]),
+    DVector::from_vec(vec![0.3823529411764711, 0.5294117647058825]),
+    DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::from_vec(vec![1.9705882352941186, 1.8235294117647072, 2.3529411764705896]);
+    "normal with larger penalty"
+)]
+#[test_case(
+    10.0,
+    DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
+    DVector::from_vec(vec![1.5, 3.5]),
+    DVector::from_vec(vec![0.30198019801980186, 0.4257425742574258]),
+    DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::from_vec(vec![1.5792079207920793, 1.4554455445544554, 1.881188118811881]);
+    "normal with even larger penalty"
+)]
 // Ridge regression (with non-zero penalty) is guaranteed to train with collinear input variables.
 #[test_case(
+    0.5,
     DMatrix::from_vec(2, 2, vec![1.0, 2.0, 2.0, 4.0]),
     DVector::from_vec(vec![1.5, 3.5]),
     DVector::from_vec(vec![0.33333333333333404, 0.6666666666666672]),
@@ -119,15 +140,14 @@ fn ols_fails_to_predict_with_wrong_dimensions() {
     "collinear input variables"
 )]
 fn ridge_works<T: RealField + Copy>(
+    penalty: T,
     train_input: DMatrix<T>,
     train_output: DVector<T>,
     expected_coefficients: DVector<T>,
     test_input: DMatrix<T>,
     expected_prediction: DVector<T>,
 ) {
-    let penalty: T = nalgebra::convert(0.5);
-
-    let mut ridge = RidgeRegressor::new(penalty.clone()).unwrap();
+    let mut ridge = RidgeRegressor::new(penalty).unwrap();
     assert_eq!(ridge.penalty, penalty);
 
     ridge.train(&train_input, &train_output).unwrap();
