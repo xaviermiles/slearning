@@ -1,28 +1,17 @@
 use crate::traits::SupervisedModel;
 
 use crate::{SLearningError, SLearningResult};
-use nalgebra::DimName;
-use nalgebra::{
-    self, allocator::Allocator, DMatrix, DefaultAllocator, Dim, OMatrix, OVector, RealField,
-    SquareMatrix,
-};
+use nalgebra::{self, DMatrix, DVector, RealField};
 
-fn train_linear_regressor<T, R, C>(
-    inputs: &OMatrix<T, R, C>,
-    outputs: &OVector<T, R>,
+fn train_linear_regressor<T>(
+    inputs: &DMatrix<T>,
+    outputs: &DVector<T>,
     penalty: &T,
-) -> SLearningResult<OVector<T, C>>
+) -> SLearningResult<DVector<T>>
 where
     T: RealField,
-    R: Dim,
-    C: Dim + DimName,
-    DefaultAllocator: Allocator<T, R, C>
-        + Allocator<T, R>
-        + Allocator<T, C>
-        + Allocator<T, C, R>
-        + Allocator<T, C, C>,
 {
-    let mut normal_matrix_inverse: SquareMatrix<T, C, _> = inputs.transpose() * inputs;
+    let mut normal_matrix_inverse = inputs * inputs.transpose();
     if !penalty.is_zero() {
         let (n, _) = normal_matrix_inverse.shape();
         let diagonal = DMatrix::from_diagonal_element(n, n, penalty.clone());
@@ -33,8 +22,31 @@ where
             "The normal matrix is not invertible".to_string(),
         ));
     }
-    let beta_hat = normal_matrix_inverse * inputs.transpose() * outputs;
+    let beta_hat = normal_matrix_inverse * inputs * outputs;
     Ok(beta_hat)
+}
+
+fn predict_linear_regressor<T>(
+    inputs: &DMatrix<T>,
+    coefficients: &Option<DVector<T>>,
+) -> SLearningResult<DVector<T>>
+where
+    T: RealField,
+{
+    match &coefficients {
+        Some(coefficient_estimates) => {
+            if inputs.ncols() != coefficient_estimates.len() {
+                let error_msg = format!(
+                    "This model was trained with {} variables, but this input has {} variables. These must be equal.",
+                    coefficient_estimates.len(),
+                    inputs.ncols()
+                );
+                return Err(SLearningError::InvalidData(error_msg));
+            }
+            Ok(inputs * coefficient_estimates)
+        }
+        None => Err(SLearningError::UntrainedModel),
+    }
 }
 
 /// Simple linear regression using Ordinary Least Squares (OLS)
@@ -42,70 +54,52 @@ where
 /// Simple linear regression uses linear coefficients to model a single output variable as a
 /// function of one or more input variables.
 #[derive(Debug)]
-pub struct OlsRegressor<T, R>
+pub struct OlsRegressor<T>
 where
     T: RealField,
-    R: Dim,
-    DefaultAllocator: Allocator<T, R>,
 {
-    pub coefficients: Option<OVector<T, R>>,
+    pub coefficients: Option<DVector<T>>,
 }
 
-impl<T, R> Default for OlsRegressor<T, R>
+impl<T> Default for OlsRegressor<T>
 where
     T: RealField,
-    R: Dim,
-    DefaultAllocator: Allocator<T, R>,
 {
     fn default() -> Self {
         Self { coefficients: None }
     }
 }
 
-impl<T, R, C> SupervisedModel<OMatrix<T, R, C>, OVector<T, R>> for OlsRegressor<T, C>
+impl<T> SupervisedModel<T> for OlsRegressor<T>
 where
     T: RealField,
-    R: Dim,
-    C: Dim + DimName,
-    DefaultAllocator: Allocator<T, R, C>
-        + Allocator<T, R>
-        + Allocator<T, C>
-        + Allocator<T, C, R>
-        + Allocator<T, C, C>,
 {
-    fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> SLearningResult<()> {
+    fn train(&mut self, inputs: &DMatrix<T>, outputs: &DVector<T>) -> SLearningResult<()> {
         self.coefficients = Some(train_linear_regressor(inputs, outputs, &nalgebra::zero())?);
         Ok(())
     }
 
-    fn predict(&self, inputs: &OMatrix<T, R, C>) -> SLearningResult<OVector<T, R>> {
-        match &self.coefficients {
-            Some(coefficient_estimates) => Ok(inputs * coefficient_estimates),
-            _ => Err(SLearningError::UntrainedModel),
-        }
+    fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>> {
+        predict_linear_regressor(inputs, &self.coefficients)
     }
 }
 
-/// Ridge is linear regression with a penalty on the number of coefficients
+/// Ridge is Ordinary Least Squares (OLS) with L2 penalty on the number of coefficients.
 ///
 /// The penalty is a non-negative real value. A penalty of zero means that ridge regression is
 /// equivalent to simple linear regression.
 #[derive(Debug)]
-pub struct RidgeRegressor<T, R>
+pub struct RidgeRegressor<T>
 where
     T: RealField,
-    R: Dim,
-    DefaultAllocator: Allocator<T, R>,
 {
     pub penalty: T,
-    pub coefficients: Option<OVector<T, R>>,
+    pub coefficients: Option<DVector<T>>,
 }
 
-impl<T, R> RidgeRegressor<T, R>
+impl<T> RidgeRegressor<T>
 where
     T: RealField,
-    R: Dim,
-    DefaultAllocator: Allocator<T, R>,
 {
     pub fn new(penalty: T) -> SLearningResult<Self> {
         if penalty.is_negative() {
@@ -120,27 +114,16 @@ where
     }
 }
 
-impl<T, R, C> SupervisedModel<OMatrix<T, R, C>, OVector<T, R>> for RidgeRegressor<T, C>
+impl<T> SupervisedModel<T> for RidgeRegressor<T>
 where
     T: RealField,
-    R: Dim,
-    C: Dim + DimName,
-    DefaultAllocator: Allocator<T, R, C>
-        + Allocator<T, R>
-        + Allocator<T, C>
-        + Allocator<T, C, R>
-        + Allocator<T, C, C>,
-    OMatrix<T, C, C>: std::ops::AddAssign<DMatrix<T>>,
 {
-    fn train(&mut self, inputs: &OMatrix<T, R, C>, outputs: &OVector<T, R>) -> SLearningResult<()> {
+    fn train(&mut self, inputs: &DMatrix<T>, outputs: &DVector<T>) -> SLearningResult<()> {
         self.coefficients = Some(train_linear_regressor(inputs, outputs, &self.penalty)?);
         Ok(())
     }
 
-    fn predict(&self, inputs: &OMatrix<T, R, C>) -> SLearningResult<OVector<T, R>> {
-        match &self.coefficients {
-            Some(coefficient_estimates) => Ok(inputs * coefficient_estimates),
-            None => Err(SLearningError::UntrainedModel),
-        }
+    fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>> {
+        predict_linear_regressor(inputs, &self.coefficients)
     }
 }

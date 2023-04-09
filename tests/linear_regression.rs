@@ -1,53 +1,56 @@
 use std::marker::Copy;
 
-use nalgebra::{Const, Matrix2, Matrix3x2, RealField, Vector, Vector2, Vector3};
+use nalgebra::{dmatrix, DMatrix, DVector, RealField};
 use test_case::test_case;
 
 use slearning::linear_regression::{OlsRegressor, RidgeRegressor};
 use slearning::{SLearningError, SupervisedModel};
 
 #[test_case(
-    Matrix2::from([[1.0, 2.0], [3.0, 4.0]]),
-    Vector::from([1.5, 3.5]),
-    Vector::from([2.25, -0.25]),
-    Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]),
-    Vector::from([[1.5, 4.0, 3.75]]);
+    DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
+    DVector::from_vec(vec![1.5, 3.5]),
+    DVector::from_vec(vec![0.5, 0.5]),
+    DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::from_vec(vec![2.0, 2.0, 2.5]);
     "normal"
 )]
 #[test_case(
-    Matrix2::<f32>::from([[1.0, 2.0], [3.0, 4.0]]),
-    Vector2::<f32>::from([1.5, 3.5]),
-    Vector2::<f32>::from([2.25, -0.25]),
-    Matrix3x2::<f32>::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]),
-    Vector3::<f32>::from([[1.5, 4.0, 3.75]]);
+    DMatrix::<f32>::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
+    DVector::<f32>::from_vec(vec![1.5, 3.5]),
+    DVector::<f32>::from_vec(vec![0.5, 0.5]),
+    DMatrix::<f32>::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::<f32>::from_vec(vec![2.0, 2.0, 2.5]);
     "normal with f32"
 )]
 fn ols_works<T: RealField + Copy>(
-    train_input: Matrix2<T>,
-    train_output: Vector2<T>,
-    expected_coefficients: Vector2<T>,
-    test_input: Matrix3x2<T>,
-    expected_prediction: Vector3<T>,
+    train_input: DMatrix<T>,
+    train_output: DVector<T>,
+    expected_coefficients: DVector<T>,
+    test_input: DMatrix<T>,
+    expected_test_output: DVector<T>,
 ) {
     let mut ols = OlsRegressor::default();
 
     ols.train(&train_input, &train_output).unwrap();
 
-    match ols.coefficients {
-        Some(actual_coefficients) => assert_eq!(actual_coefficients, expected_coefficients),
+    match &ols.coefficients {
+        Some(actual_coefficients) => assert_eq!(actual_coefficients, &expected_coefficients),
         None => panic!("`coefficients` field is None"),
     }
 
     let prediction = ols.predict(&test_input).unwrap();
-    assert_eq!(prediction, expected_prediction);
+    assert_eq!(prediction, expected_test_output);
 }
 
 /// Test that OlsRegressor fails to train when there is perfect collinearity between two of the
 /// input variables, since this violates one of the assumptions of the OLS model.
 #[test]
 fn ols_fails_to_train_with_collinear_input_variables() {
-    let train_input = Matrix2::from([[1.0, 2.0], [2.0, 4.0]]);
-    let train_output = Vector::from([1.5, 3.5]);
+    let train_input = dmatrix![
+        1.0, 2.0;
+        2.0, 4.0
+    ];
+    let train_output = DVector::from_vec(vec![1.5, 3.5]);
     let expected_error = SLearningError::InvalidData("The normal matrix is not invertible".into());
 
     let mut ols = OlsRegressor::default();
@@ -57,7 +60,10 @@ fn ols_fails_to_train_with_collinear_input_variables() {
 
 #[test]
 fn ols_fails_to_predict_when_untrained() {
-    let test_input = Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
+    let test_input = dmatrix![
+        1.0, 2.0, 2.0;
+        3.0, 2.0, 3.0
+    ];
     let expected = SLearningError::UntrainedModel;
 
     let ols = OlsRegressor::default();
@@ -65,47 +71,89 @@ fn ols_fails_to_predict_when_untrained() {
     assert_eq!(actual, expected);
 }
 
+#[test]
+fn ols_fails_to_predict_with_wrong_dimensions() {
+    let train_input = dmatrix![
+        1.0, 2.0;
+        3.0, 4.0
+    ];
+    let train_output = DVector::from_vec(vec![1.5, 3.5]);
+    let mut ols = OlsRegressor::default();
+    ols.train(&train_input, &train_output).unwrap();
+
+    let expected = SLearningError::InvalidData(
+        "This model was trained with 2 variables, but this input has 3 variables. These must be equal.".to_string()
+    );
+
+    let test_input = dmatrix![
+        1.1, 2.1, 1.1;
+        3.1, 4.1, 4.1
+    ];
+    let actual = ols.predict(&test_input).unwrap_err();
+    assert_eq!(actual, expected);
+}
+
 #[test_case(
-    Matrix2::from([[1.0, 2.0], [3.0, 4.0]]),
-    Vector::from([1.5, 3.5]),
-    Vector::from([0.6883116883116889, 0.42857142857142855]),
-    Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]),
-    Vector::from([[1.9740259740259745, 2.233766233766235, 2.6623376623376633]]);
+    0.5,
+    DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
+    DVector::from_vec(vec![1.5, 3.5]),
+    DVector::from_vec(vec![0.41558441558441495, 0.5454545454545453]),
+    DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::from_vec(vec![2.0519480519480506, 1.9220779220779205, 2.4675324675324655]);
     "normal"
 )]
 #[test_case(
-    Matrix2::<f32>::from([[1.0, 2.0], [3.0, 4.0]]),
-    Vector2::<f32>::from([1.5, 3.5]),
-    Vector2::<f32>::from([[0.6883111, 0.4285715]]),
-    Matrix3x2::<f32>::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]),
-    Vector3::<f32>::from([[1.9740256, 2.2337651, 2.6623368]]);
+    0.5f32,
+    DMatrix::<f32>::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
+    DVector::<f32>::from_vec(vec![1.5, 3.5]),
+    DVector::<f32>::from_vec(vec![0.4155839, 0.54545456]),
+    DMatrix::<f32>::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::<f32>::from_vec(vec![2.0519476, 1.922077, 2.4675317]);
     "normal with f32"
+)]
+#[test_case(
+    2.0,
+    DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
+    DVector::from_vec(vec![1.5, 3.5]),
+    DVector::from_vec(vec![0.3823529411764711, 0.5294117647058825]),
+    DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::from_vec(vec![1.9705882352941186, 1.8235294117647072, 2.3529411764705896]);
+    "normal with larger penalty"
+)]
+#[test_case(
+    10.0,
+    DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
+    DVector::from_vec(vec![1.5, 3.5]),
+    DVector::from_vec(vec![0.30198019801980186, 0.4257425742574258]),
+    DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::from_vec(vec![1.5792079207920793, 1.4554455445544554, 1.881188118811881]);
+    "normal with even larger penalty"
 )]
 // Ridge regression (with non-zero penalty) is guaranteed to train with collinear input variables.
 #[test_case(
-    Matrix2::from([[1.0, 2.0], [2.0, 4.0]]),
-    Vector::from([1.5, 3.5]),
-    Vector::from([0.33333333333333404, 0.6666666666666672]),
-    Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]),
-    Vector::from([[2.3333333333333357, 2.0000000000000027, 2.6666666666666696]]);
+    0.5,
+    DMatrix::from_vec(2, 2, vec![1.0, 2.0, 2.0, 4.0]),
+    DVector::from_vec(vec![1.5, 3.5]),
+    DVector::from_vec(vec![0.33333333333333404, 0.6666666666666672]),
+    DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
+    DVector::from_vec(vec![2.3333333333333357, 2.0000000000000027, 2.6666666666666696]);
     "collinear input variables"
 )]
 fn ridge_works<T: RealField + Copy>(
-    train_input: Matrix2<T>,
-    train_output: Vector2<T>,
-    expected_coefficients: Vector2<T>,
-    test_input: Matrix3x2<T>,
-    expected_prediction: Vector3<T>,
+    penalty: T,
+    train_input: DMatrix<T>,
+    train_output: DVector<T>,
+    expected_coefficients: DVector<T>,
+    test_input: DMatrix<T>,
+    expected_prediction: DVector<T>,
 ) {
-    let penalty: T = nalgebra::convert(0.5);
-
-    let mut ridge = RidgeRegressor::new(penalty.clone()).unwrap();
+    let mut ridge = RidgeRegressor::new(penalty).unwrap();
     assert_eq!(ridge.penalty, penalty);
 
     ridge.train(&train_input, &train_output).unwrap();
 
-    match ridge.coefficients {
-        Some(actual_coefficients) => assert_eq!(actual_coefficients, expected_coefficients),
+    match &ridge.coefficients {
+        Some(actual_coefficients) => assert_eq!(actual_coefficients, &expected_coefficients),
         None => panic!("`coefficients` field is None"),
     }
 
@@ -114,8 +162,11 @@ fn ridge_works<T: RealField + Copy>(
 }
 
 #[test]
-fn untrained_ridge_fails_to_predict() {
-    let test_input = Matrix3x2::from([[1.0, 2.0, 2.0], [3.0, 2.0, 3.0]]);
+fn ridge_fails_to_predict_when_untrained() {
+    let test_input = dmatrix![
+        1.0, 2.0, 2.0;
+        3.0, 2.0, 3.0
+    ];
     let expected = SLearningError::UntrainedModel;
 
     let ridge = RidgeRegressor::new(0.5).unwrap();
@@ -124,9 +175,31 @@ fn untrained_ridge_fails_to_predict() {
 }
 
 #[test]
+fn ridge_fails_to_predict_with_wrong_dimensions() {
+    let train_input = dmatrix![
+        1.0, 2.0;
+        3.0, 4.0
+    ];
+    let train_output = DVector::from_vec(vec![1.5, 3.5]);
+    let mut ridge = RidgeRegressor::new(0.5).unwrap();
+    ridge.train(&train_input, &train_output).unwrap();
+
+    let expected = SLearningError::InvalidData(
+        "This model was trained with 2 variables, but this input has 3 variables. These must be equal.".to_string()
+    );
+
+    let test_input = dmatrix![
+        1.1, 2.1, 1.1;
+        3.1, 4.1, 4.1
+    ];
+    let actual = ridge.predict(&test_input).unwrap_err();
+    assert_eq!(actual, expected);
+}
+
+#[test]
 fn ridge_fails_with_negative_penalty() {
     let expected = SLearningError::InvalidParameters("Penalty cannot be less than zero.".into());
 
-    let ridge = RidgeRegressor::<_, Const<0>>::new(-0.5).unwrap_err();
+    let ridge = RidgeRegressor::new(-0.5).unwrap_err();
     assert_eq!(ridge, expected);
 }
