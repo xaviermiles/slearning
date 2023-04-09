@@ -9,17 +9,17 @@ use slearning::{SLearningError, SupervisedModel};
 #[test_case(
     DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
     DVector::from_vec(vec![1.5, 3.5]),
-    DVector::from_vec(vec![2.25, -0.25]),
+    DVector::from_vec(vec![0.5, 0.5]),
     DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
-    DVector::from_vec(vec![1.5, 4.0, 3.75]);
+    DVector::from_vec(vec![2.0, 2.0, 2.5]);
     "normal"
 )]
 #[test_case(
     DMatrix::<f32>::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
     DVector::<f32>::from_vec(vec![1.5, 3.5]),
-    DVector::<f32>::from_vec(vec![2.25, -0.25]),
+    DVector::<f32>::from_vec(vec![0.5, 0.5]),
     DMatrix::<f32>::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
-    DVector::<f32>::from_vec(vec![1.5, 4.0, 3.75]);
+    DVector::<f32>::from_vec(vec![2.0, 2.0, 2.5]);
     "normal with f32"
 )]
 fn ols_works<T: RealField + Copy>(
@@ -96,17 +96,17 @@ fn ols_fails_to_predict_with_wrong_dimensions() {
 #[test_case(
     DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
     DVector::from_vec(vec![1.5, 3.5]),
-    DVector::from_vec(vec![0.6883116883116889, 0.42857142857142855]),
+    DVector::from_vec(vec![0.41558441558441495, 0.5454545454545453]),
     DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
-    DVector::from_vec(vec![1.9740259740259745, 2.233766233766235, 2.6623376623376633]);
+    DVector::from_vec(vec![2.0519480519480506, 1.9220779220779205, 2.4675324675324655]);
     "normal"
 )]
 #[test_case(
     DMatrix::<f32>::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
     DVector::<f32>::from_vec(vec![1.5, 3.5]),
-    DVector::<f32>::from_vec(vec![0.6883111, 0.4285715]),
+    DVector::<f32>::from_vec(vec![0.4155839, 0.54545456]),
     DMatrix::<f32>::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
-    DVector::<f32>::from_vec(vec![1.9740256, 2.2337651, 2.6623368]);
+    DVector::<f32>::from_vec(vec![2.0519476, 1.922077, 2.4675317]);
     "normal with f32"
 )]
 // Ridge regression (with non-zero penalty) is guaranteed to train with collinear input variables.

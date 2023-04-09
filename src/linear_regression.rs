@@ -11,7 +11,7 @@ fn train_linear_regressor<T>(
 where
     T: RealField,
 {
-    let mut normal_matrix_inverse = inputs.transpose() * inputs;
+    let mut normal_matrix_inverse = inputs * inputs.transpose();
     if !penalty.is_zero() {
         let (n, _) = normal_matrix_inverse.shape();
         let diagonal = DMatrix::from_diagonal_element(n, n, penalty.clone());
@@ -22,7 +22,7 @@ where
             "The normal matrix is not invertible".to_string(),
         ));
     }
-    let beta_hat = normal_matrix_inverse * inputs.transpose() * outputs;
+    let beta_hat = normal_matrix_inverse * inputs * outputs;
     Ok(beta_hat)
 }
 
@@ -84,7 +84,7 @@ where
     }
 }
 
-/// Ridge is linear regression with a penalty on the number of coefficients
+/// Ridge is Ordinary Least Squares (OLS) with L2 penalty on the number of coefficients.
 ///
 /// The penalty is a non-negative real value. A penalty of zero means that ridge regression is
 /// equivalent to simple linear regression.
