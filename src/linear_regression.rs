@@ -26,6 +26,29 @@ where
     Ok(beta_hat)
 }
 
+fn predict_linear_regressor<T>(
+    inputs: &DMatrix<T>,
+    coefficients: &Option<DVector<T>>,
+) -> SLearningResult<DVector<T>>
+where
+    T: RealField,
+{
+    match &coefficients {
+        Some(coefficient_estimates) => {
+            if inputs.ncols() != coefficient_estimates.len() {
+                let error_msg = format!(
+                    "This model was trained with {} variables, but this input has {} variables. These must be equal.",
+                    coefficient_estimates.len(),
+                    inputs.ncols()
+                );
+                return Err(SLearningError::InvalidData(error_msg));
+            }
+            Ok(inputs * coefficient_estimates)
+        }
+        None => Err(SLearningError::UntrainedModel),
+    }
+}
+
 /// Simple linear regression using Ordinary Least Squares (OLS)
 ///
 /// Simple linear regression uses linear coefficients to model a single output variable as a
@@ -57,10 +80,7 @@ where
     }
 
     fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>> {
-        match &self.coefficients {
-            Some(coefficient_estimates) => Ok(inputs * coefficient_estimates),
-            _ => Err(SLearningError::UntrainedModel),
-        }
+        predict_linear_regressor(inputs, &self.coefficients)
     }
 }
 
@@ -104,9 +124,6 @@ where
     }
 
     fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>> {
-        match &self.coefficients {
-            Some(coefficient_estimates) => Ok(inputs * coefficient_estimates),
-            None => Err(SLearningError::UntrainedModel),
-        }
+        predict_linear_regressor(inputs, &self.coefficients)
     }
 }

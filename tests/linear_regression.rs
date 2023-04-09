@@ -71,6 +71,28 @@ fn ols_fails_to_predict_when_untrained() {
     assert_eq!(actual, expected);
 }
 
+#[test]
+fn ols_fails_to_predict_with_wrong_dimensions() {
+    let train_input = dmatrix![
+        1.0, 2.0;
+        3.0, 4.0
+    ];
+    let train_output = DVector::from_vec(vec![1.5, 3.5]);
+    let mut ols = OlsRegressor::default();
+    ols.train(&train_input, &train_output).unwrap();
+
+    let expected = SLearningError::InvalidData(
+        "This model was trained with 2 variables, but this input has 3 variables. These must be equal.".to_string()
+    );
+
+    let test_input = dmatrix![
+        1.1, 2.1, 1.1;
+        3.1, 4.1, 4.1
+    ];
+    let actual = ols.predict(&test_input).unwrap_err();
+    assert_eq!(actual, expected);
+}
+
 #[test_case(
     DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
     DVector::from_vec(vec![1.5, 3.5]),
@@ -128,6 +150,28 @@ fn ridge_fails_to_predict_when_untrained() {
     let expected = SLearningError::UntrainedModel;
 
     let ridge = RidgeRegressor::new(0.5).unwrap();
+    let actual = ridge.predict(&test_input).unwrap_err();
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn ridge_fails_to_predict_with_wrong_dimensions() {
+    let train_input = dmatrix![
+        1.0, 2.0;
+        3.0, 4.0
+    ];
+    let train_output = DVector::from_vec(vec![1.5, 3.5]);
+    let mut ridge = RidgeRegressor::new(0.5).unwrap();
+    ridge.train(&train_input, &train_output).unwrap();
+
+    let expected = SLearningError::InvalidData(
+        "This model was trained with 2 variables, but this input has 3 variables. These must be equal.".to_string()
+    );
+
+    let test_input = dmatrix![
+        1.1, 2.1, 1.1;
+        3.1, 4.1, 4.1
+    ];
     let actual = ridge.predict(&test_input).unwrap_err();
     assert_eq!(actual, expected);
 }
