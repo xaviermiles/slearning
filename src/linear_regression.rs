@@ -11,7 +11,7 @@ fn train_linear_regressor<T>(
 where
     T: RealField,
 {
-    let mut normal_matrix_inverse = inputs * inputs.transpose();
+    let mut normal_matrix_inverse = inputs.transpose() * inputs;
     if !penalty.is_zero() {
         let (n, _) = normal_matrix_inverse.shape();
         let diagonal = DMatrix::from_diagonal_element(n, n, penalty.clone());
@@ -22,7 +22,7 @@ where
             "The normal matrix is not invertible".to_string(),
         ));
     }
-    let beta_hat = normal_matrix_inverse * inputs * outputs;
+    let beta_hat = normal_matrix_inverse * inputs.transpose() * outputs;
     Ok(beta_hat)
 }
 
@@ -58,7 +58,19 @@ pub struct OlsRegressor<T>
 where
     T: RealField,
 {
+    /// The estimated coefficients from the fitted data.
     pub coefficients: Option<DVector<T>>,
+    /// Whether an intercept term should be included in the model.
+    fit_intercept: bool,
+}
+
+impl<T: RealField> OlsRegressor<T> {
+    pub fn new(fit_intercept: bool) -> Self {
+        Self {
+            coefficients: None,
+            fit_intercept,
+        }
+    }
 }
 
 impl<T> Default for OlsRegressor<T>
@@ -66,7 +78,10 @@ where
     T: RealField,
 {
     fn default() -> Self {
-        Self { coefficients: None }
+        Self {
+            coefficients: None,
+            fit_intercept: true,
+        }
     }
 }
 

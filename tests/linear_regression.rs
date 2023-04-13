@@ -1,35 +1,38 @@
 use std::marker::Copy;
 
-use nalgebra::{dmatrix, DMatrix, DVector, RealField};
+use nalgebra::{dmatrix, dvector, DMatrix, DVector, RealField};
 use test_case::test_case;
 
 use slearning::linear_regression::{OlsRegressor, RidgeRegressor};
 use slearning::{SLearningError, SupervisedModel};
 
 #[test_case(
-    DMatrix::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
-    DVector::from_vec(vec![1.5, 3.5]),
-    DVector::from_vec(vec![0.5, 0.5]),
-    DMatrix::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
-    DVector::from_vec(vec![2.0, 2.0, 2.5]);
+    dmatrix![1.0, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
+    dvector![6.0, 8.0, 9.0, 11.0],
+    false,
+    dvector![2.0909090909090904, 2.5454545454545388],
+    DMatrix::from_vec(1, 2, vec![3.0, 5.0]),
+    dvector![16.0];
     "normal"
 )]
 #[test_case(
-    DMatrix::<f32>::from_vec(2, 2, vec![1.0, 2.0, 3.0, 4.0]),
-    DVector::<f32>::from_vec(vec![1.5, 3.5]),
-    DVector::<f32>::from_vec(vec![0.5, 0.5]),
-    DMatrix::<f32>::from_vec(3, 2, vec![1.0, 2.0, 2.0, 3.0, 2.0, 3.0]),
-    DVector::<f32>::from_vec(vec![2.0, 2.0, 2.5]);
+    dmatrix![1.0f32, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
+    dvector![6.0f32, 8.0, 9.0, 11.0],
+    false,
+    dvector![2.0909111f32, 2.5454588],
+    DMatrix::from_vec(1, 2, vec![3.0f32, 5.0]),
+    dvector![16.0f32];
     "normal with f32"
 )]
 fn ols_works<T: RealField + Copy>(
     train_input: DMatrix<T>,
     train_output: DVector<T>,
+    fit_intercept: bool,
     expected_coefficients: DVector<T>,
     test_input: DMatrix<T>,
     expected_test_output: DVector<T>,
 ) {
-    let mut ols = OlsRegressor::default();
+    let mut ols = OlsRegressor::new(fit_intercept);
 
     ols.train(&train_input, &train_output).unwrap();
 
