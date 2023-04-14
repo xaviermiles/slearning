@@ -9,20 +9,38 @@ use slearning::{SLearningError, SupervisedModel};
 #[test_case(
     dmatrix![1.0, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
     dvector![6.0, 8.0, 9.0, 11.0],
+    true,
+    dvector![3.0, 1.0, 2.0],
+    dmatrix![3.0, 5.0; 2.0, 1.0],
+    dvector![16.0, 7.0];
+    "normal"
+)]
+#[test_case(
+    dmatrix![1.0f32, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
+    dvector![6.0f32, 8.0, 9.0, 11.0],
+    true,
+    dvector![3.0, 1.0, 2.0],
+    dmatrix![3.0f32, 5.0; 2.0, 1.0],
+    dvector![16.0f32, 7.0];
+    "normal f32"
+)]
+#[test_case(
+    dmatrix![1.0, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
+    dvector![6.0, 8.0, 9.0, 11.0],
     false,
     dvector![2.0909090909090904, 2.5454545454545388],
-    DMatrix::from_vec(1, 2, vec![3.0, 5.0]),
-    dvector![16.0];
-    "normal"
+    dmatrix![3.0, 5.0; 2.0, 1.0],
+    dvector![18.999999999999964, 6.7272727272727195];
+    "without intercept"
 )]
 #[test_case(
     dmatrix![1.0f32, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
     dvector![6.0f32, 8.0, 9.0, 11.0],
     false,
     dvector![2.0909111f32, 2.5454588],
-    DMatrix::from_vec(1, 2, vec![3.0f32, 5.0]),
-    dvector![16.0f32];
-    "normal with f32"
+    dmatrix![3.0f32, 5.0; 2.0, 1.0],
+    dvector![19.000027f32, 6.727281];
+    "without intercept f32"
 )]
 fn ols_works<T: RealField + Copy>(
     train_input: DMatrix<T>,
