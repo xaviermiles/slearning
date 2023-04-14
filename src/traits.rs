@@ -16,7 +16,7 @@ use crate::SLearningResult;
 ///
 /// This model does have training data for the output variable.
 pub trait SupervisedModel<T> {
-    fn train(&mut self, inputs: &DMatrix<T>, outputs: &DVector<T>) -> SLearningResult<()>;
+    fn train(&mut self, inputs: DMatrix<T>, outputs: DVector<T>) -> SLearningResult<()>;
 
     fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>>;
 }

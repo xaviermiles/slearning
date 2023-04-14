@@ -7,52 +7,52 @@ use slearning::linear_regression::{OlsRegressor, RidgeRegressor};
 use slearning::{SLearningError, SupervisedModel};
 
 #[test_case(
+    true,
     dmatrix![1.0, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
     dvector![6.0, 8.0, 9.0, 11.0],
-    true,
     dvector![3.0, 1.0, 2.0],
     dmatrix![3.0, 5.0; 2.0, 1.0],
     dvector![16.0, 7.0];
     "normal"
 )]
 #[test_case(
+    true,
     dmatrix![1.0f32, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
     dvector![6.0f32, 8.0, 9.0, 11.0],
-    true,
     dvector![3.0, 1.0, 2.0],
     dmatrix![3.0f32, 5.0; 2.0, 1.0],
     dvector![16.0f32, 7.0];
     "normal f32"
 )]
 #[test_case(
+    false,
     dmatrix![1.0, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
     dvector![6.0, 8.0, 9.0, 11.0],
-    false,
     dvector![2.0909090909090904, 2.5454545454545388],
     dmatrix![3.0, 5.0; 2.0, 1.0],
     dvector![18.999999999999964, 6.7272727272727195];
     "without intercept"
 )]
 #[test_case(
+    false,
     dmatrix![1.0f32, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0],
     dvector![6.0f32, 8.0, 9.0, 11.0],
-    false,
     dvector![2.0909111f32, 2.5454588],
     dmatrix![3.0f32, 5.0; 2.0, 1.0],
     dvector![19.000027f32, 6.727281];
     "without intercept f32"
 )]
 fn ols_works<T: RealField + Copy>(
+    fit_intercept: bool,
     train_input: DMatrix<T>,
     train_output: DVector<T>,
-    fit_intercept: bool,
     expected_coefficients: DVector<T>,
     test_input: DMatrix<T>,
     expected_test_output: DVector<T>,
 ) {
     let mut ols = OlsRegressor::new(fit_intercept);
 
-    ols.train(&train_input, &train_output).unwrap();
+    ols.train(train_input, train_output).unwrap();
 
     match &ols.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, &expected_coefficients),
@@ -75,7 +75,7 @@ fn ols_fails_to_train_with_collinear_input_variables() {
     let expected_error = SLearningError::InvalidData("The normal matrix is not invertible".into());
 
     let mut ols = OlsRegressor::default();
-    let actual_error = ols.train(&train_input, &train_output).unwrap_err();
+    let actual_error = ols.train(train_input, train_output).unwrap_err();
     assert_eq!(actual_error, expected_error);
 }
 
@@ -100,7 +100,7 @@ fn ols_fails_to_predict_with_wrong_dimensions() {
     ];
     let train_output = DVector::from_vec(vec![1.5, 3.5]);
     let mut ols = OlsRegressor::default();
-    ols.train(&train_input, &train_output).unwrap();
+    ols.train(train_input, train_output).unwrap();
 
     let expected = SLearningError::InvalidData(
         "This model was trained with 2 variables, but this input has 3 variables. These must be equal.".to_string()
@@ -171,7 +171,7 @@ fn ridge_works<T: RealField + Copy>(
     let mut ridge = RidgeRegressor::new(penalty).unwrap();
     assert_eq!(ridge.penalty, penalty);
 
-    ridge.train(&train_input, &train_output).unwrap();
+    ridge.train(train_input, train_output).unwrap();
 
     match &ridge.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, &expected_coefficients),
@@ -203,7 +203,7 @@ fn ridge_fails_to_predict_with_wrong_dimensions() {
     ];
     let train_output = DVector::from_vec(vec![1.5, 3.5]);
     let mut ridge = RidgeRegressor::new(0.5).unwrap();
-    ridge.train(&train_input, &train_output).unwrap();
+    ridge.train(train_input, train_output).unwrap();
 
     let expected = SLearningError::InvalidData(
         "This model was trained with 2 variables, but this input has 3 variables. These must be equal.".to_string()

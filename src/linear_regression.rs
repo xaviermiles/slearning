@@ -3,15 +3,26 @@ use crate::traits::SupervisedModel;
 use crate::{SLearningError, SLearningResult};
 use nalgebra::{self, DMatrix, DVector, RealField};
 
+fn get_full_inputs<T: RealField>(inputs: DMatrix<T>, fit_intercept: bool) -> DMatrix<T> {
+    if !fit_intercept {
+        return inputs;
+    }
+    inputs.insert_column(0, T::one())
+}
+
 fn train_linear_regressor<T>(
     inputs: &DMatrix<T>,
     outputs: &DVector<T>,
+    fit_intercept: bool,
     penalty: &T,
 ) -> SLearningResult<DVector<T>>
 where
     T: RealField,
 {
-    let mut normal_matrix_inverse = inputs.transpose() * inputs;
+    // TODO: Is there a way to avoid this clone? At least for when `fit_intercept` is false.
+    let full_inputs = &get_full_inputs(inputs.clone(), fit_intercept);
+
+    let mut normal_matrix_inverse = full_inputs.transpose() * full_inputs;
     if !penalty.is_zero() {
         let (n, _) = normal_matrix_inverse.shape();
         let diagonal = DMatrix::from_diagonal_element(n, n, penalty.clone());
@@ -22,28 +33,31 @@ where
             "The normal matrix is not invertible".to_string(),
         ));
     }
-    let beta_hat = normal_matrix_inverse * inputs.transpose() * outputs;
+    let beta_hat = normal_matrix_inverse * full_inputs.transpose() * outputs;
     Ok(beta_hat)
 }
 
 fn predict_linear_regressor<T>(
     inputs: &DMatrix<T>,
     coefficients: &Option<DVector<T>>,
+    fit_intercept: bool,
 ) -> SLearningResult<DVector<T>>
 where
     T: RealField,
 {
     match &coefficients {
         Some(coefficient_estimates) => {
-            if inputs.ncols() != coefficient_estimates.len() {
+            // TODO: Same question as above about clone.
+            let full_inputs = &get_full_inputs(inputs.clone(), fit_intercept);
+            if full_inputs.ncols() != coefficient_estimates.len() {
                 let error_msg = format!(
                     "This model was trained with {} variables, but this input has {} variables. These must be equal.",
                     coefficient_estimates.len(),
-                    inputs.ncols()
+                    full_inputs.ncols()
                 );
                 return Err(SLearningError::InvalidData(error_msg));
             }
-            Ok(inputs * coefficient_estimates)
+            Ok(full_inputs * coefficient_estimates)
         }
         None => Err(SLearningError::UntrainedModel),
     }
@@ -89,13 +103,18 @@ impl<T> SupervisedModel<T> for OlsRegressor<T>
 where
     T: RealField,
 {
-    fn train(&mut self, inputs: &DMatrix<T>, outputs: &DVector<T>) -> SLearningResult<()> {
-        self.coefficients = Some(train_linear_regressor(inputs, outputs, &nalgebra::zero())?);
+    fn train(&mut self, inputs: DMatrix<T>, outputs: DVector<T>) -> SLearningResult<()> {
+        self.coefficients = Some(train_linear_regressor(
+            &inputs,
+            &outputs,
+            self.fit_intercept,
+            &nalgebra::zero(),
+        )?);
         Ok(())
     }
 
     fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>> {
-        predict_linear_regressor(inputs, &self.coefficients)
+        predict_linear_regressor(inputs, &self.coefficients, self.fit_intercept)
     }
 }
 
@@ -133,12 +152,17 @@ impl<T> SupervisedModel<T> for RidgeRegressor<T>
 where
     T: RealField,
 {
-    fn train(&mut self, inputs: &DMatrix<T>, outputs: &DVector<T>) -> SLearningResult<()> {
-        self.coefficients = Some(train_linear_regressor(inputs, outputs, &self.penalty)?);
+    fn train(&mut self, inputs: DMatrix<T>, outputs: DVector<T>) -> SLearningResult<()> {
+        self.coefficients = Some(train_linear_regressor(
+            &inputs,
+            &outputs,
+            false,
+            &self.penalty,
+        )?);
         Ok(())
     }
 
     fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>> {
-        predict_linear_regressor(inputs, &self.coefficients)
+        predict_linear_regressor(inputs, &self.coefficients, false)
     }
 }
