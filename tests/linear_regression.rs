@@ -94,16 +94,13 @@ fn ols_fails_to_predict_when_untrained() {
 
 #[test]
 fn ols_fails_to_predict_with_wrong_dimensions() {
-    let train_input = dmatrix![
-        1.0, 2.0;
-        3.0, 4.0
-    ];
-    let train_output = DVector::from_vec(vec![1.5, 3.5]);
+    let train_input = dmatrix![1.0, 1.0; 1.0, 2.0; 2.0, 2.0; 2.0, 3.0];
+    let train_output = dvector![6.0, 8.0, 9.0, 11.0];
     let mut ols = OlsRegressor::default();
     ols.train(train_input, train_output).unwrap();
 
     let expected = SLearningError::InvalidData(
-        "This model was trained with 2 variables, but this input has 3 variables. These must be equal.".to_string()
+        "This model was trained with 3 variables, but this input has 4 variables. These must be equal.".to_string()
     );
 
     let test_input = dmatrix![
