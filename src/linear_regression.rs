@@ -25,7 +25,11 @@ where
     let mut normal_matrix_inverse = full_inputs.transpose() * full_inputs;
     if !penalty.is_zero() {
         let (n, _) = normal_matrix_inverse.shape();
-        let diagonal = DMatrix::from_diagonal_element(n, n, penalty.clone());
+        let mut diagonal = DMatrix::from_diagonal_element(n, n, penalty.clone());
+        if fit_intercept {
+            // Don't penalise the intercept :^)
+            diagonal[(0, 0)] = T::zero();
+        }
         normal_matrix_inverse += diagonal;
     }
     if !normal_matrix_inverse.try_inverse_mut() {
