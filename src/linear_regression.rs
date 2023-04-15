@@ -24,13 +24,12 @@ where
 
     let mut normal_matrix_inverse = full_inputs.transpose() * full_inputs;
     if !penalty.is_zero() {
-        let (n, _) = normal_matrix_inverse.shape();
-        let mut diagonal = DMatrix::from_diagonal_element(n, n, penalty.clone());
-        if fit_intercept {
-            // Don't penalise the intercept :^)
-            diagonal[(0, 0)] = T::zero();
+        // The intercept should not be penalised, so don't add to first diagonal if `fit_intercept` is true.
+        let start = if fit_intercept { 1 } else { 0 };
+        let end = normal_matrix_inverse.shape().0;
+        for index in start..end {
+            normal_matrix_inverse[(index, index)] += penalty.clone();
         }
-        normal_matrix_inverse += diagonal;
     }
     if !normal_matrix_inverse.try_inverse_mut() {
         return Err(SLearningError::InvalidData(
