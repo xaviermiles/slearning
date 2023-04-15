@@ -3,6 +3,29 @@ use crate::traits::SupervisedModel;
 use crate::{SLearningError, SLearningResult};
 use nalgebra::{self, DMatrix, DVector, RealField};
 
+fn validate_train_dimensions<T: RealField>(
+    inputs: &DMatrix<T>,
+    outputs: &DVector<T>,
+) -> SLearningResult<()> {
+    let num_input_obs = inputs.nrows();
+    let num_output_obs = outputs.len();
+
+    if num_input_obs == 0 || num_output_obs == 0 {
+        return Err(SLearningError::InvalidData(
+            "Cannot train with zero observations.".to_string(),
+        ));
+    }
+
+    if num_input_obs != num_output_obs {
+        let error_msg = format!(
+            "Input has {} observation(s), but output has {} observation(s). These must be equal.",
+            num_input_obs, num_output_obs
+        );
+        return Err(SLearningError::InvalidData(error_msg));
+    }
+    Ok(())
+}
+
 fn get_full_inputs<T: RealField>(inputs: DMatrix<T>, fit_intercept: bool) -> DMatrix<T> {
     if !fit_intercept {
         return inputs;
@@ -19,6 +42,7 @@ fn train_linear_regressor<T>(
 where
     T: RealField + Copy,
 {
+    validate_train_dimensions(inputs, outputs)?;
     // TODO: Is there a way to avoid this clone? At least for when `fit_intercept` is false.
     let full_inputs = &get_full_inputs(inputs.clone(), fit_intercept);
 
@@ -33,7 +57,7 @@ where
     }
     if !normal_matrix_inverse.try_inverse_mut() {
         return Err(SLearningError::InvalidData(
-            "The normal matrix is not invertible".to_string(),
+            "The normal matrix is not invertible.".to_string(),
         ));
     }
     let beta_hat = normal_matrix_inverse * full_inputs.transpose() * outputs;

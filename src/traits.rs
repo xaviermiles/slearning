@@ -6,7 +6,7 @@
 ///
 /// This means the models that implement this trait are responsible for verifying the consistency
 /// of matrix/vector shapes *at runtime*, where necessary (e.g. training inputs and outputs have
-/// the same number of rows).
+/// the same number of observations).
 ///
 use nalgebra::{DMatrix, DVector};
 

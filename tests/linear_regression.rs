@@ -54,11 +54,37 @@ fn ols_works<T: RealField + Copy>(
 
     match &ols.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, &expected_coefficients),
-        None => panic!("`coefficients` field is None"),
+        None => panic!("`coefficients` field is None."),
     }
 
     let prediction = ols.predict(&test_input).unwrap();
     assert_eq!(prediction, expected_test_output);
+}
+
+#[test]
+fn ols_fails_to_train_with_zero_observations() {
+    let train_input: DMatrix<f64> = dmatrix![];
+    let train_output: DVector<f64> = dvector![];
+    let expected_error =
+        SLearningError::InvalidData("Cannot train with zero observations.".to_string());
+
+    let mut ols = OlsRegressor::default();
+    let actual_error = ols.train(train_input, train_output).unwrap_err();
+    assert_eq!(actual_error, expected_error);
+}
+
+#[test]
+fn ols_fails_to_train_with_inconsistent_dimensions() {
+    let train_input = dmatrix![1.0, 1.0; 1.0, 2.0];
+    let train_output = dvector![1.0, 2.0, 3.0];
+    let expected_error = SLearningError::InvalidData(
+        "Input has 2 observation(s), but output has 3 observation(s). These must be equal."
+            .to_string(),
+    );
+
+    let mut ols = OlsRegressor::default();
+    let actual_error = ols.train(train_input, train_output).unwrap_err();
+    assert_eq!(actual_error, expected_error);
 }
 
 /// Test that OlsRegressor fails to train when there is perfect collinearity between two of the
@@ -70,7 +96,7 @@ fn ols_fails_to_train_with_collinear_input_variables() {
         2.0, 4.0
     ];
     let train_output = DVector::from_vec(vec![1.5, 3.5]);
-    let expected_error = SLearningError::InvalidData("The normal matrix is not invertible".into());
+    let expected_error = SLearningError::InvalidData("The normal matrix is not invertible.".into());
 
     let mut ols = OlsRegressor::default();
     let actual_error = ols.train(train_input, train_output).unwrap_err();
@@ -197,11 +223,37 @@ fn ridge_works<T: RealField + Copy>(
 
     match &ridge.coefficients {
         Some(actual_coefficients) => assert_eq!(actual_coefficients, &expected_coefficients),
-        None => panic!("`coefficients` field is None"),
+        None => panic!("`coefficients` field is None."),
     }
 
     let prediction = ridge.predict(&test_input).unwrap();
     assert_eq!(prediction, expected_prediction);
+}
+
+#[test]
+fn ridge_fails_to_train_with_zero_observations() {
+    let train_input: DMatrix<f64> = dmatrix![];
+    let train_output: DVector<f64> = dvector![];
+    let expected_error =
+        SLearningError::InvalidData("Cannot train with zero observations.".to_string());
+
+    let mut ridge = RidgeRegressor::new(1.0, true).unwrap();
+    let actual_error = ridge.train(train_input, train_output).unwrap_err();
+    assert_eq!(actual_error, expected_error);
+}
+
+#[test]
+fn ridge_fails_to_train_with_inconsistent_dimensions() {
+    let train_input = dmatrix![1.0, 1.0];
+    let train_output = dvector![1.0, 2.0, 3.0, 4.0];
+    let expected_error = SLearningError::InvalidData(
+        "Input has 1 observation(s), but output has 4 observation(s). These must be equal."
+            .to_string(),
+    );
+
+    let mut ridge = RidgeRegressor::new(1.0, true).unwrap();
+    let actual_error = ridge.train(train_input, train_output).unwrap_err();
+    assert_eq!(actual_error, expected_error);
 }
 
 #[test]
