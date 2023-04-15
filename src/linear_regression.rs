@@ -128,6 +128,7 @@ where
     T: RealField,
 {
     pub penalty: T,
+    fit_intercept: bool,
     pub coefficients: Option<DVector<T>>,
 }
 
@@ -135,7 +136,7 @@ impl<T> RidgeRegressor<T>
 where
     T: RealField,
 {
-    pub fn new(penalty: T) -> SLearningResult<Self> {
+    pub fn new(penalty: T, fit_intercept: bool) -> SLearningResult<Self> {
         if penalty.is_negative() {
             return Err(SLearningError::InvalidParameters(
                 "Penalty cannot be less than zero.".to_string(),
@@ -143,6 +144,7 @@ where
         }
         Ok(Self {
             penalty,
+            fit_intercept,
             coefficients: None,
         })
     }
@@ -156,13 +158,13 @@ where
         self.coefficients = Some(train_linear_regressor(
             &inputs,
             &outputs,
-            false,
+            self.fit_intercept,
             &self.penalty,
         )?);
         Ok(())
     }
 
     fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>> {
-        predict_linear_regressor(inputs, &self.coefficients, false)
+        predict_linear_regressor(inputs, &self.coefficients, self.fit_intercept)
     }
 }
