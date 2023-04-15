@@ -6,7 +6,7 @@
 ///
 /// This means the models that implement this trait are responsible for verifying the consistency
 /// of matrix/vector shapes *at runtime*, where necessary (e.g. training inputs and outputs have
-/// the same number of rows).
+/// the same number of observations).
 ///
 use nalgebra::{DMatrix, DVector};
 
@@ -16,7 +16,7 @@ use crate::SLearningResult;
 ///
 /// This model does have training data for the output variable.
 pub trait SupervisedModel<T> {
-    fn train(&mut self, inputs: &DMatrix<T>, outputs: &DVector<T>) -> SLearningResult<()>;
+    fn train(&mut self, inputs: DMatrix<T>, outputs: DVector<T>) -> SLearningResult<()>;
 
     fn predict(&self, inputs: &DMatrix<T>) -> SLearningResult<DVector<T>>;
 }
