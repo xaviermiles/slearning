@@ -1,5 +1,3 @@
-use std::marker::Copy;
-
 use nalgebra::{dmatrix, dvector, DMatrix, DVector, RealField};
 use test_case::test_case;
 

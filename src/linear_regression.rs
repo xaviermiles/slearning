@@ -17,7 +17,7 @@ fn train_linear_regressor<T>(
     penalty: &T,
 ) -> SLearningResult<DVector<T>>
 where
-    T: RealField,
+    T: RealField + Copy,
 {
     // TODO: Is there a way to avoid this clone? At least for when `fit_intercept` is false.
     let full_inputs = &get_full_inputs(inputs.clone(), fit_intercept);
@@ -28,7 +28,7 @@ where
         let start = if fit_intercept { 1 } else { 0 };
         let end = normal_matrix_inverse.shape().0;
         for index in start..end {
-            normal_matrix_inverse[(index, index)] += penalty.clone();
+            normal_matrix_inverse[(index, index)] += *penalty;
         }
     }
     if !normal_matrix_inverse.try_inverse_mut() {
@@ -104,7 +104,7 @@ where
 
 impl<T> SupervisedModel<T> for OlsRegressor<T>
 where
-    T: RealField,
+    T: RealField + Copy,
 {
     fn train(&mut self, inputs: DMatrix<T>, outputs: DVector<T>) -> SLearningResult<()> {
         self.coefficients = Some(train_linear_regressor(
@@ -155,7 +155,7 @@ where
 
 impl<T> SupervisedModel<T> for RidgeRegressor<T>
 where
-    T: RealField,
+    T: RealField + Copy,
 {
     fn train(&mut self, inputs: DMatrix<T>, outputs: DVector<T>) -> SLearningResult<()> {
         self.coefficients = Some(train_linear_regressor(
